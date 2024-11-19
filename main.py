@@ -16,11 +16,27 @@ def get_file_path(base_dir: str = "data") -> str:
         raise ValueError("Invalid input for year. Please enter a valid number.") from e
 
 
+def write_new_file(base_dir: str = "results") -> str:
+    """Prompt user to save the file and return the file path."""
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+
+    save_file = input('Do you want to save the file? (yes/no): ').strip().lower()
+    if save_file == 'yes':
+        file_name = input("Name of the saved file (with .csv extension): ").strip()
+        file_path = os.path.join(base_dir, file_name)
+        return file_path
+    else:
+        print("File save skipped.")
+
+
 def main():
     try:
-        file_path = get_file_path()
-        reader = Reader(file_path)
-        print(reader.read())
+        read_file_path = get_file_path()
+        reader = Reader(read_file_path)
+        print(f"\n\n{reader.read_transactions()}")
+        output = write_new_file()
+        reader.save_to_excel(output)
     except Exception as e:
         print(f"An error occurred: {e}")
 

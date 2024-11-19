@@ -11,8 +11,9 @@ Thumbs.db
 test.py
 notes.txt
 
-# Data files
+# folders
 data
+results
 
 # C extensions
 *.so
