@@ -41,7 +41,7 @@ class Reader:
 
         # Regular expression to match transaction lines
         transaction_pattern = re.compile(
-            r"(\d{2}-\d{2}-\d{4})\s+(Bij|Af)\s+([\d,]+)\s+(.*)"
+            r"(\d{2}-\d{2}-\d{4})\s+(Bij|Af)\s+([\d., ]+)\s+(.*)"
         )
 
         # Find all transactions in the output
@@ -52,19 +52,47 @@ class Reader:
 
         return transaction_list
 
+    def adjust_amounts(self) -> pd.DataFrame:
+        """Adjust the amount column based on the type column."""
+        transactions = self.read_transactions()
+
+        if not transactions or len(transactions) <= 1:
+            raise ValueError("No transactions to process.")
+
+        # Split the header and rows
+        header = transactions[0].split(", ")
+        data = [row.split(", ") for row in transactions[1:]]
+
+        # Create a DataFrame
+        df = pd.DataFrame(data, columns=header)
+
+        # Adjust the amounts
+        df["amount"] = df.apply(
+            lambda row: f"-{row['amount']}" if row["type"] == "Af" else row["amount"],
+            axis=1,
+        )
+
+        return df
+
+    def edit_columns(self) -> pd.DataFrame:
+        """Drop the type column and create the IBAN and name columns."""
+        # Recall the dataframe
+        df = self.adjust_amounts()
+
+        # Drop the type column
+        df = df.drop("type", axis=1)
+
+        # Add the IBAN column
+
+        # Add the name column
+
+        return df
+
     def save_to_excel(self, output_file: str):
         """Save the transactions to an Excel file."""
         try:
-            transactions = self.read_transactions()
-            if not transactions or len(transactions) <= 1:
-                raise ValueError("No transactions to save.")
-
-            # Split the header and rows
-            header = transactions[0].split(", ")
-            data = [row.split(", ") for row in transactions[1:]]
-
-            # Create a DataFrame
-            df = pd.DataFrame(data, columns=header)
+            # Adjust amounts and create a DataFrame
+            df = self.edit_columns()
 
             # Save to Excel
             output = f"{output_file}.xlsx"
