@@ -1,5 +1,5 @@
 # Import modules
-from reader import Reader
+from sns import SNS
 from file_manager import FileManager
 
 
@@ -11,7 +11,7 @@ def main():
 
         # Initialize FileManager and Reader
         file_manager = FileManager()
-        reader = Reader(file_manager)
+        reader = SNS(file_manager)
 
         # Get the file path and load the file
         file_path = file_manager.get_file_path(year, month)

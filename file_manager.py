@@ -7,7 +7,7 @@ class FileManager:
     A utility class for managing file paths and directories.
     """
 
-    def __init__(self, base_dir="data", results_dir="results"):
+    def __init__(self, base_dir="data/sns", results_dir="results"):
         """
         Initialize the FileManager with default or custom directories.
 

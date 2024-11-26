@@ -3,7 +3,7 @@ import pandas as pd
 from file_manager import FileManager
 
 
-class Reader:
+class SNS:
     def __init__(self, file_manager: FileManager, seperator: str = ';', decimal=',',
                  encoding='utf-8', engine='openpyxl'):
         """
@@ -35,7 +35,7 @@ class Reader:
             ValueError: If the file content is invalid or unreadable.
             Exception: For any other unexpected error.
         """
-        self.df = None  # Reset the DataFrame before loading new data
+        self.df = None
         try:
             # Attempt to load the CSV file
             self.df = pd.read_csv(
@@ -81,6 +81,61 @@ class Reader:
         except Exception as e:
             print(f"An error occurred while assigning names: {e}")
 
+    def create_transactions_sheet(self) -> pd.DataFrame:
+        """
+        Create a DataFrame for transactions data.
+        Returns:
+            pd.DataFrame: DataFrame containing the transactions.
+        """
+        try:
+            # Ensure names are assigned before saving to Excel
+            self.assign_names()
+
+            # Define the column indexes to be included in the output
+            column_indexes = [0, 2, 3, 10, 17]
+
+            # Select the specified columns by their index
+            filtered_df = self.df.iloc[:, column_indexes]
+
+            # Rename the columns for better readability in the Excel file
+            filtered_df.columns = ['DateOfTransaction', 'IBAN', 'Name', 'Amount', 'Description']
+
+            return filtered_df
+        except Exception as e:
+            print(f"Error creating income-expense sheet: {e}")
+            return pd.DataFrame()
+
+    def create_income_expense_sheet(self) -> pd.DataFrame:
+        """
+        Create a DataFrame for an income-expense table based on grouped data.
+        Returns:
+            pd.DataFrame: DataFrame containing income and expense details.
+        """
+        try:
+            # Group by 'Name' and 'IBAN', and sum the 'Amount'
+            filtered_df = self.create_transactions_sheet()
+            grouped = filtered_df.groupby(['Name', 'IBAN'])['Amount'].sum()
+
+            # Separate into incomes and expenses
+            income_df = grouped[grouped >= 0].reset_index()
+            income_df.columns = ['Income Names', 'IBAN', 'Income Amounts']
+
+            expense_df = grouped[grouped < 0].reset_index()
+            expense_df.columns = ['Expense Names', 'IBAN', 'Expense Amounts']
+
+            # Create a unified DataFrame for the income-expense table
+            income_expense_df = pd.DataFrame({
+                'Income Names': income_df['Income Names'],
+                'Income Amounts': income_df['Income Amounts'],
+                'Expense Names': expense_df['Expense Names'],
+                'Expense Amounts': expense_df['Expense Amounts']
+            })
+
+            return income_expense_df
+        except Exception as e:
+            print(f"Error creating income-expense sheet: {e}")
+            return pd.DataFrame()
+
     def csv_to_excel(self, import_path: str, transactions_path: str):
         """
         Convert a CSV file to an Excel file with specific columns.
@@ -97,24 +152,16 @@ class Reader:
             Exception: For any other unexpected error during conversion.
         """
         try:
-            # Ensure names are assigned before saving to Excel
-            self.assign_names()
+            # Generate the transactions table
+            filtered_df = self.create_transactions_sheet()
 
-            # Define the column indexes to be included in the output
-            column_indexes = [0, 2, 3, 10, 17]
+            # Generate the income-expense table
+            income_expense_df = self.create_income_expense_sheet()
 
-            # Select the specified columns by their index
-            filtered_df = self.df.iloc[:, column_indexes]
-
-            # Rename the columns for better readability in the Excel file
-            filtered_df.columns = ['DateOfTransaction', 'IBAN', 'Name', 'Amount', 'Description']
-
-            # Save the filtered DataFrame to an Excel file
-            filtered_df.to_excel(
-                f"{transactions_path}.xlsx",
-                index=False,
-                engine=self.engine
-            )
+            # Save both sheets to the Excel file
+            with pd.ExcelWriter(f"{transactions_path}.xlsx", engine=self.engine) as writer:
+                filtered_df.to_excel(writer, index=False, sheet_name='Transactions')
+                income_expense_df.to_excel(writer, index=False, sheet_name='Income & Expenses')
 
             print(f"Successfully converted '{import_path}' to '{transactions_path}.xlsx' with selected columns.")
         except IndexError as e:
