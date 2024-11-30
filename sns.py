@@ -17,6 +17,12 @@ class SNS(BankBase):
             engine (str): Engine used for Excel file writing. Default is 'openpyxl'.
         """
         super().__init__(file_manager, seperator, decimal, encoding, engine)
+        self.column_names = ['DateOfTransaction', 'IBAN', 'Name', 'Amount', 'Description']
+        self.date = 0
+        self.iban = 2
+        self.name = 3
+        self.amount = 10
+        self.description = 17
 
     def load_file(self, file_path: str):
         """
@@ -59,24 +65,19 @@ class SNS(BankBase):
             Exception: For any other unexpected error during assignment.
         """
         try:
-            # Define the column indexes for 'Name' and 'Description'
-            name_col_index = 3
-            description_col_index = 17
-            iban_col_index = 2
-
             # Check if the column indexes are within the DataFrame's range
-            if name_col_index >= self.df.shape[1] or description_col_index >= self.df.shape[1]:
+            if self.name >= self.df.shape[1] or self.description >= self.df.shape[1]:
                 raise IndexError("Name or Description column index is out of range.")
 
             # Fill missing 'Name' values using the first part of the 'Description' column
-            self.df.iloc[:, name_col_index] = self.df.iloc[:, name_col_index].fillna(
-                self.df.iloc[:, description_col_index].apply(
+            self.df.iloc[:, self.name] = self.df.iloc[:, self.name].fillna(
+                self.df.iloc[:, self.description].apply(
                     lambda x: str(x).split(">")[0] if pd.notnull(x) else "Unknown"
                 )
             )
 
             # Replace empty IBANs with 'Unknown IBAN'
-            self.df[iban_col_index] = self.df[iban_col_index].apply(
+            self.df[self.iban] = self.df[self.iban].apply(
                 lambda x: 'Unknown IBAN' if not pd.notnull(x) or x == '' else x
             )
         except Exception as e:
@@ -92,14 +93,12 @@ class SNS(BankBase):
             # Ensure names are assigned before saving to Excel
             self.assign_names()
 
-            # Define the column indexes to be included in the output
-            column_indexes = [0, 2, 3, 10, 17]
-
             # Select the specified columns by their index
-            filtered_df = self.df.iloc[:, column_indexes]
+            column_idx = [self.date, self.iban, self.name, self.amount, self.description]
+            filtered_df = self.df.iloc[:, column_idx]
 
             # Rename the columns for better readability in the Excel file
-            filtered_df.columns = ['DateOfTransaction', 'IBAN', 'Name', 'Amount', 'Description']
+            filtered_df.columns = self.column_names
 
             return filtered_df
         except Exception as e:
@@ -119,7 +118,7 @@ class SNS(BankBase):
             grouped = filtered_df.groupby(['Name', 'IBAN'])['Amount'].sum()
 
             # Separate into incomes and expenses
-            income_df = grouped[grouped >= 0].reset_index()
+            income_df = grouped[grouped > 0].reset_index()
             income_df.columns = ['Income Names', 'IBAN', 'Income Amounts']
 
             expense_df = grouped[grouped < 0].reset_index()
