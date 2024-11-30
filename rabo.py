@@ -5,7 +5,7 @@ from file_manager import FileManager
 
 
 class RABO(BankBase):
-    def __init__(self, file_manager, seperator: str = ',', decimal: str = ',', encoding: str = 'utf-8',
+    def __init__(self, file_manager, seperator: str = ',', decimal: str = ',', encoding: str = 'ANSI',
                  engine: str = 'openpyxl'):
         """
         Initialize the RABO class with specific defaults or custom arguments.
@@ -18,6 +18,12 @@ class RABO(BankBase):
             engine (str): Engine used for Excel file writing. Default is 'openpyxl'.
         """
         super().__init__(file_manager, seperator, decimal, encoding, engine)
+        self.column_names = ['DateOfTransaction', 'IBAN', 'Name', 'Amount', 'Description']
+        self.date = 4
+        self.iban = 8
+        self.name = 9
+        self.amount = 6
+        self.description = 19
 
     def load_file(self, file_path: str):
         """
@@ -39,7 +45,7 @@ class RABO(BankBase):
                 sep=self.seperator,
                 decimal=self.decimal,
                 encoding=self.encoding,
-                header=None
+                header=0
             )
         except FileNotFoundError as e:
             raise FileNotFoundError(f"File not found: {file_path}") from e
@@ -55,14 +61,15 @@ class RABO(BankBase):
             pd.DataFrame: DataFrame containing the transactions.
         """
         try:
-            # Define the column indexes to be included in the output
-            # column_indexes = [0, 2, 3, 10, 17]
+            # # Ensure names are assigned before saving to Excel
+            # self.assign_names()
 
             # Select the specified columns by their index
-            filtered_df = self.df  #.iloc[:, column_indexes]
+            column_idx = [self.date, self.iban, self.name, self.amount, self.description]
+            filtered_df = self.df.iloc[:, column_idx]
 
             # Rename the columns for better readability in the Excel file
-            # filtered_df.columns = ['DateOfTransaction', 'IBAN', 'Name', 'Amount', 'Description']
+            filtered_df.columns = self.column_names
 
             return filtered_df
         except Exception as e:
