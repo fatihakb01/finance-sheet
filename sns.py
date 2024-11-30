@@ -62,6 +62,7 @@ class SNS(BankBase):
             # Define the column indexes for 'Name' and 'Description'
             name_col_index = 3
             description_col_index = 17
+            iban_col_index = 2
 
             # Check if the column indexes are within the DataFrame's range
             if name_col_index >= self.df.shape[1] or description_col_index >= self.df.shape[1]:
@@ -72,6 +73,11 @@ class SNS(BankBase):
                 self.df.iloc[:, description_col_index].apply(
                     lambda x: str(x).split(">")[0] if pd.notnull(x) else "Unknown"
                 )
+            )
+
+            # Replace empty IBANs with 'Unknown IBAN'
+            self.df[iban_col_index] = self.df[iban_col_index].apply(
+                lambda x: 'Unknown IBAN' if not pd.notnull(x) or x == '' else x
             )
         except Exception as e:
             print(f"An error occurred while assigning names: {e}")
@@ -107,8 +113,9 @@ class SNS(BankBase):
             pd.DataFrame: DataFrame containing income and expense details.
         """
         try:
-            # Group by 'Name' and 'IBAN', and sum the 'Amount'
             filtered_df = self.create_transactions_sheet()
+
+            # Group by 'Name' and 'IBAN', and sum the 'Amount'
             grouped = filtered_df.groupby(['Name', 'IBAN'])['Amount'].sum()
 
             # Separate into incomes and expenses
@@ -117,6 +124,11 @@ class SNS(BankBase):
 
             expense_df = grouped[grouped < 0].reset_index()
             expense_df.columns = ['Expense Names', 'IBAN', 'Expense Amounts']
+
+            # Ensure both income and expense tables have the same length
+            max_length = max(len(income_df), len(expense_df))
+            income_df = income_df.reindex(range(max_length)).fillna('')
+            expense_df = expense_df.reindex(range(max_length)).fillna('')
 
             # Create a unified DataFrame for the income-expense table
             income_expense_df = pd.DataFrame({
