@@ -1,5 +1,6 @@
 # Import modules
 from sns import SNS
+from rabo import RABO
 from file_manager import FileManager
 
 
@@ -8,10 +9,20 @@ def main():
         # Prompt for year and month
         year = int(input("Enter the year: "))
         month = input("Enter the month: ").strip()
+        bank = int(input(f"Choose one of the following banks:"
+                         f"\n{int(1)}. SNS Bank\n{int(2)}. RABO Bank\nI choose option (type in a number): "))
 
         # Initialize FileManager and Reader
-        file_manager = FileManager()
-        reader = SNS(file_manager)
+        file_manager = None
+        reader = None
+        if bank == 1:
+            file_manager = FileManager(r"data\sns")
+            reader = SNS(file_manager)
+        elif bank == 2:
+            file_manager = FileManager(r"data\rabo")
+            reader = RABO(file_manager)
+        else:
+            print("Please provide a valid option (Either option 1 or 2).")
 
         # Get the file path and load the file
         file_path = file_manager.get_file_path(year, month)
