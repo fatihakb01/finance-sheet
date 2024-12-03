@@ -7,7 +7,7 @@ class FileManager:
     A utility class for managing file paths and directories.
     """
 
-    def __init__(self, base_dir="data/sns", results_dir="results"):
+    def __init__(self, bank_name="sns", base_dir="data", results_dir="results"):
         """
         Initialize the FileManager with default or custom directories.
 
@@ -15,8 +15,9 @@ class FileManager:
             base_dir (str): Directory containing the input files. Default is 'data'.
             results_dir (str): Directory for saving output files. Default is 'results'.
         """
-        self.base_dir = base_dir
-        self.results_dir = results_dir
+        self.bank_name = bank_name
+        self.base_dir = os.path.join(base_dir, self.bank_name)
+        self.results_dir = os.path.join(results_dir, self.bank_name)
 
     def get_file_path(self, year: int, month: str, file_type: str = "csv") -> str:
         """
@@ -45,7 +46,7 @@ class FileManager:
 
     def write_new_file(self, year: int, output: str) -> str:
         """
-        Construct the path to save a new file in the results directory.
+        Construct the path to save a new file in the results' directory.
 
         Creates the target directory if it does not already exist.
 
