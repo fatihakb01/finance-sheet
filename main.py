@@ -10,7 +10,7 @@ def main():
         year = int(input("Enter the year: "))
         month = input("Enter the month: ").strip()
         bank = int(input(f"Choose one of the following banks:"
-                         f"\n{int(1)}. SNS Bank\n{int(2)}. RABO Bank\n{int(3)}. Example Bank"
+                         f"\n{int(1)}. SNS Bank\n{int(2)}. RABO Bank\n"
                          f"I choose option (type in a number): "))
 
         # Initialize FileManager and Reader
