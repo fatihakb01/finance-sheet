@@ -1,19 +1,22 @@
-# Import module
 import os
 
 
 class FileManager:
     """
-    A utility class for managing file paths and directories.
+    A utility class for managing file paths and directories related to banking data.
+
+    This class provides methods to construct file paths for input and output files, ensuring proper
+    organization of files based on bank name, year, and month.
     """
 
     def __init__(self, bank_name="sns", base_dir="data", results_dir="results"):
         """
-        Initialize the FileManager with default or custom directories.
+        Initialize the FileManager with specified or default directories.
 
         Parameters:
-            base_dir (str): Directory containing the input files. Default is 'data'.
-            results_dir (str): Directory for saving output files. Default is 'results'.
+            bank_name (str): Name of the bank to organize files under. Default is 'sns'.
+            base_dir (str): Root directory for input files. Default is 'data'.
+            results_dir (str): Root directory for saving output files. Default is 'results'.
         """
         self.bank_name = bank_name
         self.base_dir = os.path.join(base_dir, self.bank_name)
@@ -21,19 +24,19 @@ class FileManager:
 
     def get_file_path(self, year: int, month: str, file_type: str = "csv") -> str:
         """
-        Construct the file path for a specific file based on year and month.
+        Construct the file path for an input file based on the year, month, and file type.
 
         Parameters:
-            year (int): Year of the file to locate.
-            month (str): Month of the file to locate.
+            year (int): Year of the file to locate (e.g., 2024).
+            month (str): Month of the file to locate (e.g., 'January' or '01').
             file_type (str): File extension/type (default is 'csv').
 
         Returns:
-            str: The complete file path to the requested file.
+            str: The full file path for the requested file.
 
         Raises:
             FileNotFoundError: If the constructed file path does not exist.
-            ValueError: If invalid input is provided for the year.
+            ValueError: If an invalid year is provided.
         """
         try:
             file_path = os.path.join(self.base_dir, str(year), f"{month}.{file_type}")
@@ -46,20 +49,19 @@ class FileManager:
 
     def write_new_file(self, year: int, output: str) -> str:
         """
-        Construct the path to save a new file in the results' directory.
+        Construct the path to save a new file in the results directory.
 
-        Creates the target directory if it does not already exist.
+        This method ensures the target directory exists, creating it if necessary.
 
         Parameters:
-            year (int): The year folder to organize output files.
-            output (str): The name of the output file (including extension).
+            year (int): The year to organize output files under (e.g., 2024).
+            output (str): The name of the output file (including its extension).
 
         Returns:
-            str: The complete path where the output file will be saved.
+            str: The full path where the output file will be saved.
         """
         file_path = os.path.join(self.results_dir, str(year))
         if not os.path.exists(file_path):
             os.makedirs(file_path)
 
-        result_path = os.path.join(file_path, output)
-        return result_path
+        return os.path.join(file_path, output)
