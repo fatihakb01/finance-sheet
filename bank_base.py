@@ -1,21 +1,24 @@
-# Import module
 from file_manager import FileManager
 import pandas as pd
 
 
 class BankBase:
+    """
+    A base class for managing bank transactions and creating income-expense reports.
+
+    Attributes:
+        file_manager (FileManager): Manages file paths and operations.
+        seperator (str): Delimiter used in CSV files. Default is ';'.
+        decimal (str): Decimal separator used in CSV files. Default is ','.
+        encoding (str): Character encoding for file reading. Default is 'utf-8'.
+        engine (str): Engine for Excel file operations. Default is 'openpyxl'.
+        header (int): Row number to use as the column names. Default is None.
+        df (pd.DataFrame): DataFrame to hold the loaded data.
+        column_names (list): Standard column names for transactions.
+    """
+
     def __init__(self, file_manager: FileManager, seperator: str = ';', decimal: str = ',',
                  encoding: str = 'utf-8', engine: str = 'openpyxl', header: int = None):
-        """
-        Initialize the base class with shared properties.
-
-        Parameters:
-            file_manager (FileManager): Instance of FileManager to manage file paths.
-            seperator (str): Delimiter used in the CSV file. Default is ';'.
-            decimal (str): Decimal separator used in the CSV file. Default is ','.
-            encoding (str): Character encoding of the CSV file. Default is 'utf-8'.
-            engine (str): Engine used for Excel file writing. Default is 'openpyxl'.
-        """
         self.df = None
         self.column_names = ['Date', 'IBAN', 'Name', 'Amount', 'Description']
         self.file_manager = file_manager
@@ -27,18 +30,17 @@ class BankBase:
 
     def load_file(self, file_path: str):
         """
-        Load a CSV file into a pandas DataFrame.
+        Load a CSV file into a DataFrame.
 
         Parameters:
             file_path (str): Path to the input CSV file.
 
         Raises:
-            FileNotFoundError: If the specified file path does not exist.
-            ValueError: If the file content is invalid or unreadable.
-            Exception: For any other unexpected error.
+            FileNotFoundError: If the file is not found.
+            ValueError: If the file is empty or invalid.
+            Exception: For unexpected errors.
         """
         try:
-            # Attempt to load the CSV file
             self.df = pd.read_csv(
                 file_path,
                 sep=self.seperator,
@@ -47,80 +49,83 @@ class BankBase:
                 header=self.header
             )
             if self.df.empty:
-                raise ValueError(f"The file at {file_path} is empty or could not be read correctly.")
+                raise ValueError(f"The file at {file_path} is empty or invalid.")
+        except (FileNotFoundError, ValueError, Exception) as e:
+            raise e
 
-        except FileNotFoundError as e:
-            raise FileNotFoundError(f"File not found: {file_path}") from e
-        except ValueError as e:
-            raise ValueError(f"Invalid file: {file_path}") from e
-        except Exception as e:
-            raise Exception(f"Unexpected error occurred: {e}") from e
+    def assign_iban(self, iban: int):
+        """
+        Replace missing or empty IBAN values with 'Unknown IBAN'.
 
-    def assign_iban(self, iban):
+        Parameters:
+            iban (int): Index of the IBAN column.
+        """
         try:
-            # Replace empty or NaN IBANs with 'Unknown IBAN'
             self.df.iloc[:, iban] = self.df.iloc[:, iban].apply(
                 lambda x: 'Unknown IBAN' if not pd.notnull(x) or x == '' else x
             )
         except Exception as e:
-            print(f"An error occurred while assigning iban: {e}")
+            print(f"Error while assigning IBAN: {e}")
 
     def create_transactions_sheet(self, date: int, name: int, amount: int, description: int, iban: int) -> pd.DataFrame:
         """
-        Create a DataFrame for transactions data.
+        Create a DataFrame with standardized transaction details.
+
+        Parameters:
+            date (int): Index of the Date column.
+            name (int): Index of the Name column.
+            amount (int): Index of the Amount column.
+            description (int): Index of the Description column.
+            iban (int): Index of the IBAN column.
+
         Returns:
-            pd.DataFrame: DataFrame containing the transactions.
+            pd.DataFrame: DataFrame containing transactions.
         """
         try:
-            # Assign 'Unknown IBAN' if empty
             self.assign_iban(iban)
-
-            # Select the specified columns by their index
             column_idx = [date, iban, name, amount, description]
             filtered_df = self.df.iloc[:, column_idx]
-
-            # Rename the columns for better readability in the Excel file
             filtered_df.columns = self.column_names
-
             return filtered_df
         except Exception as e:
-            print(f"Error creating income-expense sheet: {e}")
+            print(f"Error creating transactions sheet: {e}")
             return pd.DataFrame()
 
     def create_income_expense_sheet(self, date: int, name: int, amount: int, description: int,
                                     iban: int) -> pd.DataFrame:
         """
-        Create a DataFrame for an income-expense table based on grouped data.
+        Create an income-expense table grouped by Name and IBAN.
+
+        Parameters:
+            date (int): Index of the Date column.
+            name (int): Index of the Name column.
+            amount (int): Index of the Amount column.
+            description (int): Index of the Description column.
+            iban (int): Index of the IBAN column.
+
         Returns:
-            pd.DataFrame: DataFrame containing income and expense details.
+            pd.DataFrame: DataFrame with income and expense details.
         """
         try:
             filtered_df = self.create_transactions_sheet(date, name, amount, description, iban)
-
-            # Group by 'Name' and 'IBAN', and sum the 'Amount'
             grouped = filtered_df.groupby(['Name', 'IBAN'])['Amount'].sum()
 
-            # Separate into incomes and expenses
             income_df = grouped[grouped > 0].reset_index()
             income_df.columns = ['Income Names', 'IBAN', 'Income Amounts']
 
             expense_df = grouped[grouped < 0].reset_index()
             expense_df.columns = ['Expense Names', 'IBAN', 'Expense Amounts']
 
-            # Ensure both income and expense tables have the same length
             max_length = max(len(income_df), len(expense_df))
             income_df = income_df.reindex(range(max_length)).fillna('')
             expense_df = expense_df.reindex(range(max_length)).fillna('')
 
-            # Create a unified DataFrame for the income-expense table
-            income_expense_df = pd.DataFrame({
+            return pd.DataFrame({
                 'Income Names': income_df['Income Names'],
                 'Income Amounts': income_df['Income Amounts'],
                 'Expense Names': expense_df['Expense Names'],
                 'Expense Amounts': expense_df['Expense Amounts']
             })
-
-            return income_expense_df
         except Exception as e:
             print(f"Error creating income-expense sheet: {e}")
             return pd.DataFrame()
@@ -128,33 +133,29 @@ class BankBase:
     def csv_to_excel(self, import_path: str, transactions_path: str, date: int, name: int, amount: int,
                      description: int, iban: int):
         """
-        Convert a CSV file to an Excel file with specific columns.
-
-        The method selects specific columns from the DataFrame, assigns meaningful
-        column names, and saves the resulting data to an Excel file.
+        Convert a CSV file to an Excel file with transactions and income-expense sheets.
 
         Parameters:
             import_path (str): Path to the input CSV file.
             transactions_path (str): Path to save the output Excel file.
+            date (int): Index of the Date column.
+            name (int): Index of the Name column.
+            amount (int): Index of the Amount column.
+            description (int): Index of the Description column.
+            iban (int): Index of the IBAN column.
 
         Raises:
-            IndexError: If column indexes are out of range.
-            Exception: For any other unexpected error during conversion.
+            IndexError: If column indexes are invalid.
+            Exception: For unexpected errors during the conversion.
         """
         try:
-            # Generate the transactions table
             filtered_df = self.create_transactions_sheet(date, name, amount, description, iban)
-
-            # Generate the income-expense table
             income_expense_df = self.create_income_expense_sheet(date, name, amount, description, iban)
 
-            # Save both sheets to the Excel file
             with pd.ExcelWriter(f"{transactions_path}.xlsx", engine=self.engine) as writer:
                 filtered_df.to_excel(writer, index=False, sheet_name='Transactions')
                 income_expense_df.to_excel(writer, index=False, sheet_name='Income & Expenses')
 
-            print(f"Successfully converted '{import_path}' to '{transactions_path}.xlsx' with selected columns.")
-        except IndexError as e:
-            print(f"Column index out of range: {e}")
-        except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"Successfully converted '{import_path}' to '{transactions_path}.xlsx'.")
+        except (IndexError, Exception) as e:
+            print(f"Error during CSV to Excel conversion: {e}")
